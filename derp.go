@@ -1,28 +1,34 @@
 package main
 
 import (
-	"fmt"
-	"html/template"
-	"log"
-	"net/http"
-
+        "fmt"
+        "github.com/gorilla/mux"
+        "log"
+        "net/http"
+        "net/http/httputil"
+          "html/template"
 )
+var tpl * template.Template
 
-var tpl *template.Template
 
 func init() {
-	tpl = template.Must(template.ParseGlob("templates/*.js"))
+    tpl = template.Must(template.ParseGlob("templates/*.js"))
 }
+
+func DumpRequest(w http.ResponseWriter, r *http.Request) {
+        w.Header().Add("Content-Type", "application/javascript")
+        tpl.ExecuteTemplate(w, "derp.js", r)
+        requestDump, err := httputil.DumpRequest(r, true)
+        if err != nil {
+                fmt.Println(w, err.Error())
+        } else {
+                fmt.Println(w, string(requestDump))
+        }
+}
+
 func main() {
-	http.HandleFunc("/", index)
-	log.Fatal(http.ListenAndServeTLS("10.9.1.24:443","server.crt", "client.key", nil))
-}
-
-func index(w http.ResponseWriter, r *http.Request) {
-  tpl.ExecuteTemplate(w, "derp.js", res)
-	ua := r.Header.Get("User-Agent")
-	url := fmt.Sprintf("%v %v %v %v %v", r.Method, r.URL, r.Proto, r.Host, ua)
-	fmt.Printf("Tracking: %s \n", url)
-	return
-
+        router := mux.NewRouter()
+        router.HandleFunc("/", DumpRequest).Methods("GET")
+        router.HandleFunc("/", DumpRequest).Methods("POST")
+        log.Fatal(http.ListenAndServeTLS("10.9.1.24:443", "server.crt", "server.key",router))
 }
